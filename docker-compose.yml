@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL 16 with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: finassist-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: finassist_db
+      POSTGRES_USER: finassist_user
+      POSTGRES_PASSWORD: finassist_secret_pass_2026!
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/src/main/resources/db/migration/V1__init_schema.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ./backend/src/main/resources/db/migration/V2__seed_data.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finassist_user -d finassist_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - finassist-network
+
+  # 2. Python FastAPI AI & RAG Microservice
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: finassist-ai-service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: 8000
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      DATABASE_URL: postgresql://finassist_user:finassist_secret_pass_2026!@postgres:5432/finassist_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - finassist-network
+
+  # 3. Java 21 / Spring Boot 3 Core Platform
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: finassist-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/finassist_db
+      SPRING_DATASOURCE_USERNAME: finassist_user
+      SPRING_DATASOURCE_PASSWORD: finassist_secret_pass_2026!
+      AI_SERVICE_URL: http://ai-service:8000
+      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    networks:
+      - finassist-network
+
+  # 4. React 18 + TypeScript Web Dashboard
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: finassist-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - finassist-network
+
+volumes:
+  pgdata:
+
+networks:
+  finassist-network:
+    driver: bridge

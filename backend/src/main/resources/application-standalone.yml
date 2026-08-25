@@ -1,0 +1,49 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: finassist-backend
+  datasource:
+    url: jdbc:h2:mem:finassist_db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:db/migration/V2__seed_data.sql
+
+ai:
+  service:
+    url: ${AI_SERVICE_URL:http://localhost:8000}
+    connect-timeout-ms: 5000
+    read-timeout-ms: 15000
+
+security:
+  jwt:
+    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970337336763979244226452948404D6351655468576D5A7134743777217A25432A
+    expiration-ms: 86400000
+
+rate-limiting:
+  capacity: 120
+  refill-tokens: 120
+  refill-duration-seconds: 60
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{correlationId:-NO_CORR}] %-5level %logger{36} - %msg%n"
+  level:
+    root: INFO
+    com.finassist: INFO

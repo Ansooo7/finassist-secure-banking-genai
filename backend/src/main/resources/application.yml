@@ -1,0 +1,56 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: finassist-backend
+  profiles:
+    active: standalone
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/finassist_db}
+    username: ${SPRING_DATASOURCE_USERNAME:finassist_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:finassist_secret_pass_2026!}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: FinAssistHikariCP
+      maximum-pool-size: 15
+      minimum-idle: 5
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+ai:
+  service:
+    url: ${AI_SERVICE_URL:http://localhost:8000}
+    connect-timeout-ms: 5000
+    read-timeout-ms: 15000
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970337336763979244226452948404D6351655468576D5A7134743777217A25432A}
+    expiration-ms: 86400000
+
+rate-limiting:
+  capacity: 100
+  refill-tokens: 100
+  refill-duration-seconds: 60
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{correlationId:-NO_CORR}] %-5level %logger{36} - %msg%n"
+  level:
+    root: INFO
+    com.finassist: INFO
